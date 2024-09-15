@@ -14,7 +14,7 @@ lflags="-lSDL2 -lm"
 
 
 platform="unix"
-out="Elementxt"
+out="Essence"
 compiler="g++"
 mcompiler="moonc"
 cflags="$cflags -DLUA_USE_POSIX"
