@@ -14,3 +14,6 @@ typedef struct { int x, y, width, height; } RRect;
 void RInit (SDL_Window *win);
 
 void RSetClipRect (RRect rect);
+void RGetSize (int *x, int *y);
+void RUpdateRects (RRect *rects, int count);
+

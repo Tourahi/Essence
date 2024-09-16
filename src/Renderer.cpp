@@ -59,7 +59,7 @@ static void* checkAlloc (void *ptr)
   return ptr;
 }
 
-static const char* utf8ToCodepoint (const char *p; unsigned *dst)
+static const char* utf8ToCodepoint (const char *p, unsigned *dst)
 {
   unsigned res, n;
   switch (*p & 0xf0) {
@@ -76,3 +76,40 @@ static const char* utf8ToCodepoint (const char *p; unsigned *dst)
   return p + 1;
 }
 
+
+/// gets surface size
+void RGetSize(int *x, int *y)
+{
+  SDL_Surface *surf = SDL_GetWindowSurface(window);
+  *x = surf->w;
+  *y = surf->h;
+}
+
+/// update all the rects in the window
+void RUpdateRects(RRect *rects, int count)
+{
+  SDL_UpdateWindowSurfaceRects(window, (SDL_Rect*) rects, count);
+  static bool initFrame = true;
+  if (initFrame) {
+    SDL_ShowWindow(window);
+    initFrame = false;
+  }
+}
+
+RImage* RNewImage (int w, int h)
+{
+  /// win dims need to be positive
+  assert(w > 0 && h > 0);
+  RImage *image = (RImage*) malloc (sizeof(RImage) + w * h * sizeof(RColor));
+  checkAlloc(image);
+  image->pixels = (RColor*) (image + 1);
+  image->width = w;
+  image->height = h;
+  return image;
+}
+
+
+RImage* RFreeImage(RImage *image)
+{
+  free (image);
+}
