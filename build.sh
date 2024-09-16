@@ -36,6 +36,7 @@ done
 
 echo "C files : "
 for f in `find src -name "*.c"`; do
+  echo "compiling : ${f//\//_}.o"
   $compiler -c $cflags $f -o "${f//\//_}.o"
   if [[ $? -ne 0 ]]; then
     got_error=true
@@ -44,6 +45,7 @@ done
 
 echo "Cpp files : "
 for f in `find src -name "*.cpp"`; do
+  echo "compiling : ${f//\//_}.o"
   $compiler -c $cflags $f -o "${f//\//_}.o"
   if [[ $? -ne 0 ]]; then
     got_error=true
