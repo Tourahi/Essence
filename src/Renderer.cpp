@@ -245,7 +245,7 @@ void RFreeFont(RFont *font)
 void RSetFontTabWidth(RFont *font, int w)
 {
   GlyphSet *set = getGlyphset(font, '\t');
-  set->glyphs['\t'].xadvance = n;
+  set->glyphs['\t'].xadvance = w;
 }
 
 int RGetFontTabWidth(RFont *font)
@@ -266,6 +266,7 @@ int RGetFontWidth(RFont *font, const char *text)
   unsigned codepoint;
   while (*p) {
     p = utf8ToCodepoint(p, &codepoint);
+    GlyphSet *set = getGlyphset(font, codepoint);
     stbtt_bakedchar *g = &set->glyphs[codepoint & 0xff];
     x += g->xadvance;
   }
