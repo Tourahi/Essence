@@ -284,7 +284,7 @@ static inline RColor blendPixel (RColor dst, RColor src)
 }
 
 
-static inline RColor blend_pixel2(RColor dst, RColor src, RColor color)
+static inline RColor blendPixel2(RColor dst, RColor src, RColor color)
 {
   src.a = (src.a * color.a) >> 8;
   int ia = 0xff - src.a;
@@ -327,4 +327,39 @@ void RDrawRect (RRect rect, RColor color)
   } else {
     rectDrawLoop (blendPixel(*d, color));
   }
+}
+
+
+void RDrawImage (RImage *image, RRect *sub, int x, int y, RColor color)
+{
+  if (color.a == 0) { return; }
+
+  int n;
+  if ((n = clip.left - x) > 0) { sub->width  -= n; sub->x += n; x += n; }
+  if ((n = clip.top  - y) > 0) { sub->height -= n; sub->y += n; y += n; }
+  if ((n = x + sub->width  - clip.right ) > 0) { sub->width  -= n; }
+  if ((n = y + sub->height - clip.bottom) > 0) { sub->height -= n; }
+
+  if (sub->width <= 0 || sub->height <= 0) {
+    return;
+  }
+
+  SDL_Surface *surf = SDL_GetWindowSurface(window);
+  RColor *s = image->pixels;
+  RColor *d = (RColor*) surf->pixels;
+  s += sub->x + sub->y * image->width;
+  d += x + y * surf->w;
+  int sr = image->width - sub->width;
+  int dr = surf->w - sub->width;
+
+  for (int j = 0; j < sub->height; j++) {
+    for (int i = 0; i < sub->width; i++) {
+      *d = blendPixel2(*d, *s, color);
+      d++;
+      s++;
+    }
+    d += dr;
+    s += sr;
+  }
+
 }

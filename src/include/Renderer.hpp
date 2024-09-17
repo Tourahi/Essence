@@ -32,3 +32,5 @@ int RGetFontHeigh (RFont *font);
 /// Drawing
 
 void RDrawRect (RRect rect, RColor color);
+void RDrawImage (RImage *image, RRect *sub, int x, int y, RColor color);
+void RDrawText (RFont *font, const char *text, int x, int y, RColor color);
