@@ -21,10 +21,14 @@ void RUpdateRects (RRect *rects, int count);
 RImage* RNewImage(int w, int h);
 void RFreeImage(RImage *image);
 
-// RFont
+/// RFont
 RFont* RLoadFont (const char *filename, float size);
 void RFreeFont (RFont *font);
 void RSetFontTabWidth (RFont *font, int w);
 int RGetFontTabWidth (RFont *font);
 int RGetFontWidth (RFont *font, const char *text);
 int RGetFontHeigh (RFont *font);
+
+/// Drawing
+
+void RDrawRect (RRect rect, RColor color);

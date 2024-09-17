@@ -272,3 +272,58 @@ int RGetFontWidth(RFont *font, const char *text)
   return x;
 }
 
+/// Blending color
+static inline RColor blendPixel (RColor dst, RColor src)
+{
+  int ia = 0xff - src.a; // How much of dst should we retain
+  dst.r = ((src.r * src.a) + (dst.r * ia)) >> 8;
+  dst.g = ((src.g * src.a) + (dst.g * ia)) >> 8;
+  dst.b = ((src.b * src.a) + (dst.b * ia)) >> 8;
+  return dst;
+}
+
+
+static inline RColor blend_pixel2(RColor dst, RColor src, RColor color)
+{
+  src.a = (src.a * color.a) >> 8;
+  int ia = 0xff - src.a;
+  dst.r = ((src.r * color.r * src.a) >> 16) + ((dst.r * ia) >> 8);
+  dst.g = ((src.g * color.g * src.a) >> 16) + ((dst.g * ia) >> 8);
+  dst.b = ((src.b * color.b * src.a) >> 16) + ((dst.b * ia) >> 8);
+  return dst;
+}
+
+/// Drawing loops
+
+
+#define rectDrawLoop(expr)        \
+  for (int j = y1; j < y2; j++) {   \
+    for (int i = x1; i < x2; i++) { \
+      *d = expr;                    \
+      d += 1;                          \
+    }                               \
+    d += dr;                        \
+  }
+
+void RDrawRect (RRect rect, RColor color)
+{
+  if (color.a == 0) { return; }
+
+  int x1 = rect.x < clip.left ? clip.left : rect.x;
+  int y1 = rect.y < clip.top  ? clip.top  : rect.y;
+  int x2 = rect.x + rect.width;
+  int y2 = rect.y + rect.height;
+  x2 = x2 > clip.right  ? clip.right  : x2;
+  y2 = y2 > clip.bottom ? clip.bottom : y2;
+
+  SDL_Surface *surf = SDL_GetWindowSurface(window);
+  RColor *d = (RColor*) surf->pixels;
+  d += x1 + y1 * surf->w;
+  int dr = surf->w - (x2 - x1);
+
+  if (color.a == 0xff) {
+    rectDrawLoop (color);
+  } else {
+    rectDrawLoop (blendPixel(*d, color));
+  }
+}
