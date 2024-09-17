@@ -17,6 +17,8 @@ struct RImage {
 };
 
 #define GLYPHSET_MAX 256
+#define INIT_IMAGE_WIDTH 128
+#define INIT_IMAGE_HEIGHT 128
 
 typedef struct {
   RImage *image;
@@ -109,7 +111,164 @@ RImage* RNewImage (int w, int h)
 }
 
 
-RImage* RFreeImage(RImage *image)
+void RFreeImage(RImage *image)
 {
   free (image);
 }
+
+static GlyphSet* loadGlyphset(RFont* font, int idx)
+{
+  GlyphSet *set = (GlyphSet*) checkAlloc(calloc(1, sizeof(GlyphSet)));
+
+  // image init
+  int width  = INIT_IMAGE_WIDTH;
+  int height = INIT_IMAGE_HEIGHT;
+
+  bool validBufferSize = false;
+
+
+  while (!validBufferSize)
+  {
+
+    set->image = RNewImage(width, height);
+
+    // basically doing this "pixels / (ascent - descent)" but fancy :).
+    float s = 
+      stbtt_ScaleForMappingEmToPixels(&font->stbfont, 1) /
+      stbtt_ScaleForPixelHeight(&font->stbfont, 1);
+
+    int res = stbtt_BakeFontBitmap((const unsigned char*) font->data, 0, font->size * s, 
+      (unsigned char*) set->image->pixels,
+      width, height, idx * 256, 256, set->glyphs);
+
+    // if size is not enough DOUBLE ITTTT.
+    if (res < 0) {
+      width *= 2;
+      width *= 2;
+      RFreeImage(set->image);
+      continue;
+    }
+    validBufferSize = true;
+  }
+
+  int asc, desc, linegap;
+  stbtt_GetFontVMetrics(&font->stbfont, &asc, &desc, &linegap);
+
+  float scale = stbtt_ScaleForMappingEmToPixels(&font->stbfont, font->size);
+  int scaledAsc = asc * scale * 0.5;
+
+  for (int i = 0; i < 256; i++) {
+    /* align glyphs properly with the baseline */
+    set->glyphs[i].yoff += scaledAsc;
+    /* ensure integer values for pixel-perfect rendering && to remove fractional spacing */
+    set->glyphs[i].xadvance = floor(set->glyphs[i].xadvance);
+  }
+
+  /* convert 8bit data to 32bit */
+  for (int i = width * height - 1; i >= 0; i--) {
+    /* cast to uint8_t ptr and then offset it by i */
+    uint8_t n = *((uint8_t*) set->image->pixels + i);
+    set->image->pixels[i] = (RColor){ .r = 255, .g = 255, .b = 255, .a = n};
+  }
+
+  return set;
+}
+
+static GlyphSet* getGlyphset (RFont *font, int codepoint)
+{
+  int idx = (codepoint >> 8) % GLYPHSET_MAX;
+  if (!font->sets[idx]) {
+    font->sets[idx] = loadGlyphset(font, idx);
+  }
+  return font->sets[idx];
+}
+
+
+RFont* RLoadFont (const char *filename, float size)
+{
+  RFont *font = NULL;
+  FILE *fp = NULL;
+
+  font = (RFont*) checkAlloc(calloc(1, sizeof(RFont)));
+  font->size = size;
+
+  fp = fopen(filename, "rb");
+  if (!fp) { return NULL; }
+
+  fseek(fp, 0, SEEK_END);
+  int buffSize = ftell(fp);
+  fseek(fp, 0, SEEK_SET);
+
+  /// load
+  font->data = checkAlloc(malloc(buffSize));
+  int _ = fread(font->data, 1, buffSize, fp);
+  (void) _;
+  fclose(fp);
+  fp = NULL;
+
+  /// init stbfont
+  int ok = stbtt_InitFont(&font->stbfont, (const unsigned char*) font->data, 0);
+  if (!ok) {
+    if (fp) { fclose(fp); }
+    if (font) { free(font->data); }
+    free (font);
+    return NULL;
+  } else {
+    /// get height and scale
+    int ascent, descent, linegap;
+    stbtt_GetFontVMetrics(&font->stbfont, &ascent, &descent, &linegap);
+    float scale = stbtt_ScaleForMappingEmToPixels(&font->stbfont, size);
+    font->height = (ascent - descent + linegap) * scale + 0.5;
+    
+    /// make tab and newline glyphs invisible
+    stbtt_bakedchar *g = getGlyphset(font, '\n')->glyphs;
+    g['\t'].x1 = g['\t'].x0;
+    g['\n'].x1 = g['\n'].x0;
+
+    return font;
+  }
+}
+
+void RFreeFont(RFont *font)
+{
+  for (int i = 0; i < GLYPHSET_MAX; i++) {
+    GlyphSet *set = font->sets[i];
+    if (set) {
+      RFreeImage(set->image);
+      free (set);
+    }
+    free (font->data);
+    free (font);
+  }
+}
+
+void RSetFontTabWidth(RFont *font, int w)
+{
+  GlyphSet *set = getGlyphset(font, '\t');
+  set->glyphs['\t'].xadvance = n;
+}
+
+int RGetFontTabWidth(RFont *font)
+{
+  GlyphSet *set = getGlyphset(font, '\t');
+  return set->glyphs['\t'].xadvance;
+}
+
+int RGetFontHeigh(RFont *font)
+{
+  return font->height;
+}
+
+int RGetFontWidth(RFont *font, const char *text)
+{
+  int x = 0;
+  const char *p = text;
+  unsigned codepoint;
+  while (*p) {
+    p = utf8ToCodepoint(p, &codepoint);
+    stbtt_bakedchar *g = &set->glyphs[codepoint & 0xff];
+    x += g->xadvance;
+  }
+  return x;
+}
+
